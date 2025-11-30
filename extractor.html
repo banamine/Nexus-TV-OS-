@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Playlist Extractor</title>
+<style>
+* {margin:0; padding:0; box-sizing:border-box}
+body {background:#0b0e27; color:#00f3ff; font-family:Arial; padding:20px}
+.container {max-width:1200px; margin:0 auto}
+h1 {margin-bottom:20px; color:#39ff14}
+.section {background:#1a1a2e; border:1px solid #00f3ff; border-radius:8px; padding:20px; margin-bottom:20px}
+input[type="file"] {padding:10px; background:#0b0e27; border:1px solid #00f3ff; color:#00f3ff; border-radius:4px}
+button {background:#39ff14; color:#000; border:none; padding:10px 20px; border-radius:4px; cursor:pointer; font-weight:bold; margin:10px 0}
+button:hover {background:#00f3ff}
+#input, #output {background:#0b0e27; border:1px solid #00f3ff; padding:15px; border-radius:4px; height:300px; overflow-y:auto; font-family:monospace; font-size:12px; line-height:1.4; white-space:pre-wrap; word-wrap:break-word}
+.stats {background:#0b0e27; border:1px solid #39ff14; padding:10px; border-radius:4px; margin:10px 0; color:#39ff14}
+.demo {background:#0b0e27; border:1px solid #39ff14; padding:10px; border-radius:4px; margin:10px 0}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>📺 PLAYLIST EXTRACTOR (No Installation Needed)</h1>
+
+<div class="section">
+<h2>How It Works:</h2>
+<p>1. Upload a .m3u or .txt file</p>
+<p>2. Tool extracts all URLs and titles</p>
+<p>3. Results shown below</p>
+<p>4. Copy results as JSON</p>
+</div>
+
+<div class="section">
+<h2>🔍 Upload Your Playlist:</h2>
+<input type="file" id="fileInput" accept=".m3u,.m3u8,.txt,.json,.js">
+<button onclick="processFile()">Extract</button>
+</div>
+
+<div class="section">
+<h2>📊 Input File Preview:</h2>
+<div id="input">Select a file...</div>
+</div>
+
+<div class="section">
+<h2>✅ Extracted Results:</h2>
+<div id="output">Results will appear here...</div>
+<button onclick="downloadJSON()">Download as JSON</button>
+<button onclick="copyToClipboard()">Copy Results</button>
+</div>
+
+<div class="section">
+<h2>📝 Live Demo (Click to test):</h2>
+<button onclick="runDemo()">Run Demo with Sample M3U</button>
+<div class="demo" id="demo"></div>
+</div>
+
+<script>
+let extractedData = [];
+
+function processFile() {
+    const file = document.getElementById('fileInput').files[0];
+    if (!file) {
+        alert('Select a file first');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const content = e.target.result;
+        document.getElementById('input').textContent = content.substring(0, 2000) + (content.length > 2000 ? '\n\n... (file truncated for display)' : '');
+        
+        extractedData = extract(content);
+        showResults();
+    };
+    reader.readAsText(file);
+}
+
+function extract(content) {
+    const items = [];
+    const lines = content.split('\n');
+    
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        
+        if (line.includes('#EXTINF') || line.includes(',')) {
+            const title = line.replace(/#EXTINF.*?,/, '').trim();
+            const nextLine = lines[i+1] ? lines[i+1].trim() : '';
+            if (nextLine.startsWith('http')) {
+                items.push({ title, url: nextLine });
+                i++;
+            }
+        } else if (line.startsWith('http')) {
+            items.push({ title: `Channel ${items.length+1}`, url: line });
+        }
+    }
+    
+    return items;
+}
+
+function showResults() {
+    const stats = `EXTRACTED: ${extractedData.length} items\n\n`;
+    let output = stats + '[\n';
+    
+    extractedData.forEach((item, idx) => {
+        output += `  {\n`;
+        output += `    "title": "${item.title}",\n`;
+        output += `    "url": "${item.url}"\n`;
+        output += `  }${idx < extractedData.length - 1 ? ',' : ''}\n`;
+    });
+    
+    output += ']\n\n';
+    output += extractedData.map((item, idx) => `${idx+1}. ${item.title}\n   ${item.url}`).join('\n\n');
+    
+    document.getElementById('output').textContent = output;
+}
+
+function runDemo() {
+    const demoContent = `#EXTM3U
+#EXTINF:-1 group-title="News",CNN
+http://stream.cnn.com/live
+#EXTINF:-1 group-title="Sports",ESPN
+http://stream.espn.com/live
+#EXTINF:-1 group-title="Movies",HBO
+http://stream.hbo.com/feed`;
+    
+    const demoDiv = document.getElementById('demo');
+    demoDiv.textContent = 'Running demo...\n\n';
+    
+    extractedData = extract(demoContent);
+    
+    let demoOutput = `✅ Input (M3U Format):\n${demoContent}\n\n`;
+    demoOutput += `✅ Extracted ${extractedData.length} items:\n\n`;
+    demoOutput += JSON.stringify(extractedData, null, 2);
+    
+    demoDiv.textContent = demoOutput;
+    
+    document.getElementById('input').textContent = demoContent;
+    showResults();
+}
+
+function downloadJSON() {
+    const json = JSON.stringify(extractedData, null, 2);
+    const blob = new Blob([json], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'extracted.json';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function copyToClipboard() {
+    const text = JSON.stringify(extractedData, null, 2);
+    navigator.clipboard.writeText(text);
+    alert('Copied to clipboard!');
+}
+
+// Auto-run demo on load
+window.onload = function() {
+    runDemo();
+};
+</script>
+</body>
+</html>

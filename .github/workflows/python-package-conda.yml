@@ -12,12 +12,13 @@ jobs:
       uses: conda-incubator/setup-miniconda@v3
       with:
         environment-file: environment.yml
-        auto-activate-base: false
-        activate-environment: my-env # make sure this matches your environment.yml name
+        auto-activate: false
+        activate-environment: nexus-tv-env
         
     - name: Run tests or scripts
-      shell: bash -el {0} # <--- THIS IS CRITICAL FOR CONDA
+      shell: bash -el {0}
       run: |
         conda info
         conda list
-        # Your python commands here
+        # If you have a specific script to run, add it below. 
+        # For example: python main.py

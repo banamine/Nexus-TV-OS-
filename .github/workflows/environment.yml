@@ -1,10 +1,9 @@
-name: nexus-tv-os
+name: nexus-tv-env
 channels:
-  - conda-forge
   - defaults
+  - conda-forge
 dependencies:
   - python=3.10
   - pip
-  - pip:
-    - pytest
-    - flake8
+  - requests
+  - beautifulsoup4
